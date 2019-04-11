@@ -1,0 +1,27 @@
+apiVersion: skaffold/v1beta7
+kind: Config
+build:
+  tagPolicy:
+    envTemplate:
+      template: '{{.DOCKER_REGISTRY}}/livewyer-test/result:{{.VERSION}}'
+  artifacts:
+  - image: livewyer-test/result
+  local: {}
+deploy:
+  kubectl: {}
+profiles:
+- name: dev
+  build:
+    artifacts:
+    - image: harbor.demo.training.livew.io/livewyer-test/result
+    tagPolicy:
+      sha256: {}
+    local: {}
+  deploy:
+    helm:
+      releases:
+      - name: result
+        chartPath: charts/result
+        skipBuildDependencies: true # Skip helm dep build
+        setValueTemplates:
+          imageName: 'harbor.demo.training.livew.io/livewyer-test/result@sha256:{{.DIGEST_HEX}}'
