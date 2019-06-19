@@ -1,6 +1,6 @@
 pipeline {
   agent {
-    label "jenkins-go"
+    label "jenkins-nodejs"
   }
   environment {
     ORG = 'livewyer-test'
@@ -18,16 +18,31 @@ pipeline {
         HELM_RELEASE = "$PREVIEW_NAMESPACE".toLowerCase()
       }
       steps {
-        container('go') {
-          dir('/home/jenkins/go/src/github.com/livewyer-test/result') {
-            checkout scm
-            sh "export VERSION=$PREVIEW_VERSION && skaffold build -f skaffold.yaml"
-            sh "jx step post build --image $DOCKER_REGISTRY/$ORG/$APP_NAME:$PREVIEW_VERSION"
-          }
-          dir('/home/jenkins/go/src/github.com/livewyer-test/result/charts/preview') {
+        container('nodejs') {
+          checkout scm
+          sh "export VERSION=$PREVIEW_VERSION && skaffold build -f skaffold.yaml"
+          sh "jx step post build --image $DOCKER_REGISTRY/$ORG/$APP_NAME:$PREVIEW_VERSION"
+          dir('./charts/preview') {
             sh "make preview"
             sh "jx preview --app $APP_NAME --dir ../.."
           }
+        }
+      }
+    }
+    stage('BDD Test') {
+      when {
+        branch 'PR-*'
+      }
+      environment {
+        PREVIEW_VERSION = "0.0.0-SNAPSHOT-$BRANCH_NAME-$BUILD_NUMBER"
+        PREVIEW_NAMESPACE = "$APP_NAME-$BRANCH_NAME".toLowerCase()
+        HELM_RELEASE = "$PREVIEW_NAMESPACE".toLowerCase()
+      }
+      steps {
+        container('nodejs') {
+          checkout scm
+          sh "npm install -g cucumber"
+          sh "CI=true DISPLAY=:99 npm test"
         }
       }
     }
@@ -36,10 +51,8 @@ pipeline {
         branch 'master'
       }
       steps {
-        container('go') {
-          dir('/home/jenkins/go/src/github.com/livewyer-test/result') {
+        container('nodejs') {
             checkout scm
-
             // ensure we're not on a detached head
             sh "git checkout master"
             sh "git config --global credential.helper store"
@@ -50,7 +63,6 @@ pipeline {
             sh "jx step tag --version \$(cat VERSION)"
             sh "export VERSION=`cat VERSION` && skaffold build -f skaffold.yaml"
             sh "jx step post build --image $DOCKER_REGISTRY/$ORG/$APP_NAME:\$(cat VERSION)"
-          }
         }
       }
     }
@@ -59,7 +71,7 @@ pipeline {
         branch 'master'
       }
       steps {
-        container('go') {
+        container('nodejs') {
           dir('/home/jenkins/go/src/github.com/livewyer-test/result/charts/result') {
             sh "jx step changelog --version v\$(cat ../../VERSION)"
 
