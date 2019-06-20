@@ -1,27 +1,37 @@
+{{- if .Values.knativeDeploy }}
+{{- else }}
 apiVersion: extensions/v1beta1
 kind: Deployment
 metadata:
   name: {{ template "fullname" . }}
   labels:
-    app: {{ template "fullname" . }}
+    draft: {{ default "draft-app" .Values.draft }}
+    chart: "{{ .Chart.Name }}-{{ .Chart.Version | replace "+" "_" }}"
 spec:
   replicas: {{ .Values.replicaCount }}
   template:
     metadata:
       labels:
+        draft: {{ default "draft-app" .Values.draft }}
         app: {{ template "fullname" . }}
+{{- if .Values.podAnnotations }}
+      annotations:
+{{ toYaml .Values.podAnnotations | indent 8 }}
+{{- end }}
     spec:
       containers:
-        - name: result
-          image: {{ .Values.image.repository }}:{{ .Values.image.tag }}
-          imagePullPolicy: {{default "Always" .Values.image.pullPolicy}}
-          ports:
-            - containerPort: 80
-              name: http
-          env:
-          - name: POSTGRES_SERVER
-            value: {{ .Values.postgresql.server | default (printf "%s-postgresql" ( .Release.Name )) | quote }}
-          - name: POSTGRES_USERNAME
-            value: {{ default "postgres" .Values.postgresql.postgresUser | quote }}
-          - name: POSTGRES_PASSWORD
-            value: {{ default "postgres" .Values.postgresql.postgresPassword | quote }}
+      - name: {{ .Chart.Name }}
+        image: {{ if .Values.imageName }}{{ .Values.imageName }}{{ else }}"{{ .Values.image.repository }}:{{ .Values.image.tag }}"{{ end }}
+        imagePullPolicy: {{ .Values.image.pullPolicy }}
+        env:
+{{- range $pkey, $pval := .Values.env }}
+        - name: {{ $pkey }}
+          value: {{ $pval }}
+{{- end }}
+        ports:
+        - containerPort: {{ .Values.service.internalPort }}
+        resources:
+{{ toYaml .Values.resources | indent 12 }}
+      terminationGracePeriodSeconds: {{ .Values.terminationGracePeriodSeconds }}
+{{- end }}
+
