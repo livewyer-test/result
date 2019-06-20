@@ -43,7 +43,7 @@ pipeline {
           checkout scm
           sh "npm install cucumber"
           //sh "sleep 60000"
-          sh "./node_modules/cucumber/bin/cucumber-js --world-parameters \'{"url":"\$(cat .previewUrl)"}\'"
+          sh "./node_modules/cucumber/bin/cucumber-js --world-parameters '{\"url\":\"\$(cat .previewUrl)\"}'"
           //sh "CI=true DISPLAY=:99 npm test"
         }
       }
