@@ -41,9 +41,9 @@ pipeline {
       steps {
         container('nodejs') {
           checkout scm
-          sh "npm install -g cucumber"
-          sh "sleep 60000"
-          sh "cucumber-js --world-parameters \'{\"url\":\"\$(cat .previewUrl)\"}\'"
+          sh "npm install cucumber"
+          //sh "sleep 60000"
+          sh "./node_modules/cucumber/bin/cucumber-js --world-parameters '{\"url\":\"\\$(cat .previewUrl)\"}'"
           //sh "CI=true DISPLAY=:99 npm test"
         }
       }
